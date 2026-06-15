@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  username     String     @unique
+  passwordHash String     @map("password_hash")
+  role         String     @default("USER")
+  isActive     Boolean    @default(true) @map("is_active")
+  lastLogin    DateTime?  @map("last_login")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  topologies   Topology[]
+
+  @@map("users")
+}
+
+model Topology {
+  id          String         @id @default(uuid())
+  name        String
+  description String         @default("")
+  devices     Json
+  connections Json
+  userId      String         @map("user_id")
+  isPublic    Boolean        @default(false) @map("is_public")
+  tags        String[]
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events      NetworkEvent[]
+  statistics  NetworkStatistics[]
+
+  @@map("topologies")
+}
+
+model NetworkEvent {
+  id         String   @id @default(uuid())
+  timestamp  DateTime @default(now())
+  type       String
+  severity   String   @default("INFO")
+  source     String
+  destination String
+  message    String
+  details    Json     @default("{}")
+  topologyId String   @map("topology_id")
+  topology   Topology @relation(fields: [topologyId], references: [id], onDelete: Cascade)
+
+  @@map("network_events")
+}
+
+model NetworkStatistics {
+  id               String   @id @default(uuid())
+  timestamp        DateTime @default(now())
+  totalPackets     Int      @default(0) @map("total_packets")
+  totalBytes       Int      @default(0) @map("total_bytes")
+  packetsPerSecond Float    @default(0) @map("packets_per_second")
+  bytesPerSecond   Float    @default(0) @map("bytes_per_second")
+  activeDevices    Int      @default(0) @map("active_devices")
+  activeConnections Int     @default(0) @map("active_connections")
+  packetLoss       Float    @default(0) @map("packet_loss")
+  averageLatency   Float    @default(0) @map("average_latency")
+  bandwidthUsage   Float    @default(0) @map("bandwidth_usage")
+  topologyId       String   @map("topology_id")
+  topology         Topology @relation(fields: [topologyId], references: [id], onDelete: Cascade)
+
+  @@map("network_statistics")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  entity    String
+  entityId  String   @map("entity_id")
+  userId    String   @map("user_id")
+  details   Json     @default("{}")
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}
